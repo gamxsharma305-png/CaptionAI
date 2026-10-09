@@ -16,6 +16,10 @@ import {
   Poppins_600SemiBold,
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
+import { Oswald_600SemiBold } from '@expo-google-fonts/oswald';
+import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+import { Pacifico_400Regular } from '@expo-google-fonts/pacifico';
+import { Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 
 export const APP_FONTS = {
   Inter_400Regular,
@@ -29,6 +33,10 @@ export const APP_FONTS = {
   Archivo_900Black,
   Poppins_600SemiBold,
   Poppins_800ExtraBold,
+  Oswald_600SemiBold,
+  PlayfairDisplay_700Bold,
+  Pacifico_400Regular,
+  Montserrat_700Bold,
 };
 
 export type AppFontFamily = keyof typeof APP_FONTS;

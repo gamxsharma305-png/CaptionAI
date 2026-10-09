@@ -1,6 +1,6 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
-import type { CaptionWord } from '../models';
+import type { CaptionStyle, CaptionWord } from '../models';
 import { CAPTION_STYLES } from '../styles/captionStyles';
 import { theme } from '../theme';
 import { KineticPreview } from './KineticPreview';
@@ -15,25 +15,36 @@ const SAMPLE_WORDS: CaptionWord[] = [
 interface StylePickerProps {
   selectedId: string;
   onSelect: (id: string) => void;
+  /** Extra styles (custom / reel) shown before the built-ins. */
+  extraStyles?: CaptionStyle[];
+  /** Called on long-press — used to open the custom style editor. */
+  onEditStyle?: (id: string) => void;
 }
 
-export function StylePicker({ selectedId, onSelect }: StylePickerProps) {
+export function StylePicker({ selectedId, onSelect, extraStyles = [], onEditStyle }: StylePickerProps) {
+  const styles = [...extraStyles, ...CAPTION_STYLES];
   return (
     <FlatList
-      data={CAPTION_STYLES}
+      data={styles}
       numColumns={2}
       keyExtractor={(s) => s.id}
       scrollEnabled={false}
-      columnWrapperStyle={styles.row}
+      columnWrapperStyle={listStyles.row}
       renderItem={({ item }) => {
         const selected = item.id === selectedId;
+        const isCustom = extraStyles.some((s) => s.id === item.id);
         return (
           <Pressable
             onPress={() => onSelect(item.id)}
-            style={[styles.card, selected && styles.cardSelected]}>
+            onLongPress={onEditStyle ? () => onEditStyle(item.id) : undefined}
+            delayLongPress={450}
+            style={[listStyles.card, selected && listStyles.cardSelected]}>
             <KineticPreview words={SAMPLE_WORDS} style={item} fontScale={0.42} durationMs={4000} />
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.tagline} numberOfLines={1}>
+            <Text style={listStyles.name}>
+              {item.name}
+              {isCustom ? ' ✎' : ''}
+            </Text>
+            <Text style={listStyles.tagline} numberOfLines={1}>
               {item.tagline}
             </Text>
           </Pressable>
@@ -43,7 +54,7 @@ export function StylePicker({ selectedId, onSelect }: StylePickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const listStyles = StyleSheet.create({
   row: {
     justifyContent: 'space-between',
     marginBottom: theme.spacing.sm,

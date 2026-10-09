@@ -16,6 +16,8 @@ interface KineticPreviewProps {
   durationMs?: number;
   /** Scales the style's fontSize (e.g. 0.55 for thumbnails). */
   fontScale?: number;
+  /** When true, renders without the black container and progress bar (for reel canvas). */
+  bare?: boolean;
 }
 
 // Renders text with a faux stroke: offset copies in the stroke color
@@ -105,13 +107,13 @@ function WordView({ word, active, style: s, fontScale }: WordViewProps) {
     switch (s.animation) {
       case 'pop':
         anim.setValue(0);
-        Animated.timing(anim, { toValue: 1, duration: 320, easing: Easing.out, useNativeDriver: true }).start();
+        Animated.timing(anim, { toValue: 1, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
         break;
       case 'bounce':
         anim.setValue(0);
         Animated.sequence([
-          Animated.timing(anim, { toValue: 1, duration: 170, easing: Easing.out, useNativeDriver: true }),
-          Animated.timing(anim, { toValue: 0, duration: 200, easing: Easing.in, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 1, duration: 170, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
           Animated.timing(anim, { toValue: 0.55, duration: 130, useNativeDriver: true }),
           Animated.timing(anim, { toValue: 0, duration: 150, useNativeDriver: true }),
         ]).start();
@@ -129,11 +131,11 @@ function WordView({ word, active, style: s, fontScale }: WordViewProps) {
       case 'fade-up':
       case 'slide-in':
         anim.setValue(0);
-        Animated.timing(anim, { toValue: 1, duration: 300, easing: Easing.out, useNativeDriver: true }).start();
+        Animated.timing(anim, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
         break;
       case 'scale-punch':
         anim.setValue(0);
-        Animated.timing(anim, { toValue: 1, duration: 240, easing: Easing.out, useNativeDriver: true }).start();
+        Animated.timing(anim, { toValue: 1, duration: 240, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
         break;
       case 'word-highlight':
       case 'karaoke':
@@ -263,7 +265,7 @@ function WordView({ word, active, style: s, fontScale }: WordViewProps) {
   );
 }
 
-export function KineticPreview({ words, style: s, durationMs, fontScale = 1 }: KineticPreviewProps) {
+export function KineticPreview({ words, style: s, durationMs, fontScale = 1, bare = false }: KineticPreviewProps) {
   const timelineMs = useMemo(() => {
     const maxEnd = words.reduce((m, w) => Math.max(m, w.end), 0);
     return maxEnd > 0 ? maxEnd * 1000 : 6000;
@@ -290,7 +292,7 @@ export function KineticPreview({ words, style: s, durationMs, fontScale = 1 }: K
 
   const bg = s.background;
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, bare && styles.containerBare]}>
       <View
         style={[
           styles.captionBox,
@@ -306,9 +308,11 @@ export function KineticPreview({ words, style: s, durationMs, fontScale = 1 }: K
           ))}
         </View>
       </View>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${(now / loopMs) * 100}%` }]} />
-      </View>
+      {!bare && (
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${(now / loopMs) * 100}%` }]} />
+        </View>
+      )}
     </View>
   );
 }
@@ -319,6 +323,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     overflow: 'hidden',
+  },
+  containerBare: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    padding: 0,
   },
   captionBox: {
     minHeight: 96,

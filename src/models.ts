@@ -62,6 +62,8 @@ export interface Project {
   updatedAt: string; // ISO
   mediaPath?: string;
   mediaType?: MediaType;
+  /** 'video' = 16:9 project, 'reel' = 9:16 typography reel. Defaults to 'video'. */
+  format?: 'video' | 'reel';
   words: CaptionWord[];
   styleId: string;
   language: string;

@@ -1,6 +1,12 @@
 import type { CaptionStyle, CaptionWord, Project } from '../models';
 
-export type ExportResolution = '720p' | '1080p';
+export type ExportPreset = '720p' | '1080p' | 'reel';
+
+export const EXPORT_PRESETS: Array<{ id: ExportPreset; label: string; hint: string }> = [
+  { id: '720p', label: '16:9 · 720p', hint: 'Fast, small file' },
+  { id: '1080p', label: '16:9 · 1080p', hint: 'Full HD video' },
+  { id: 'reel', label: '9:16 · Reel', hint: '1080×1920 vertical' },
+];
 
 export interface ExportResult {
   srt: string;
@@ -40,7 +46,13 @@ export function buildSrt(words: CaptionWord[]): string {
     .join('\n');
 }
 
-export function buildAss(words: CaptionWord[], style: CaptionStyle): string {
+export function buildAss(
+  words: CaptionWord[],
+  style: CaptionStyle,
+  opts?: { playResX?: number; playResY?: number },
+): string {
+  const playResX = opts?.playResX ?? 1080;
+  const playResY = opts?.playResY ?? 1920;
   const primary = hexToAss(style.textColor === 'transparent' ? '#FFFFFF' : style.textColor);
   const secondary = hexToAss(style.highlightColor);
   const back = style.background.type === 'none' ? '&H00000000' : hexToAss('#000000');
@@ -49,8 +61,8 @@ export function buildAss(words: CaptionWord[], style: CaptionStyle): string {
     .join('\n');
   return `[Script Info]
 ScriptType: v4.00+
-PlayResX: 1080
-PlayResY: 1920
+PlayResX: ${playResX}
+PlayResY: ${playResY}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Alignment, MarginV
@@ -71,8 +83,29 @@ export function buildBurnInCommand(opts: {
   return ['-y', '-i', opts.inputPath, '-vf', `subtitles=${opts.assPath}`, '-c:a', 'copy', opts.outputPath];
 }
 
+/**
+ * 9:16 reel burn-in: cover-crops the source to 1080x1920, then burns the
+ * (portrait-authored) .ass subtitles on top.
+ */
+export function buildReelBurnInCommand(opts: {
+  inputPath: string;
+  assPath: string;
+  outputPath: string;
+}): string[] {
+  return [
+    '-y',
+    '-i',
+    opts.inputPath,
+    '-vf',
+    `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,subtitles=${opts.assPath}`,
+    '-c:a',
+    'copy',
+    opts.outputPath,
+  ];
+}
+
 export interface ExportOptions {
-  resolution: ExportResolution;
+  preset: ExportPreset;
   onProgress?: (p: number) => void;
 }
 
@@ -86,12 +119,19 @@ export async function exportProject(
   style: CaptionStyle,
   opts: ExportOptions,
 ): Promise<ExportResult> {
+  const isReel = opts.preset === 'reel';
   const srt = buildSrt(project.words);
-  const ass = buildAss(project.words, style);
+  const ass = buildAss(
+    project.words,
+    style,
+    isReel ? { playResX: 1080, playResY: 1920 } : { playResX: 1920, playResY: 1080 },
+  );
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const outputPath = `/captionai/${project.name.replace(/\s+/g, '_')}-${opts.resolution}-${stamp}.mp4`;
+  const outputPath = `/captionai/${project.name.replace(/\s+/g, '_')}-${opts.preset}-${stamp}.mp4`;
   const command = project.mediaPath
-    ? buildBurnInCommand({ inputPath: project.mediaPath, assPath: '/captionai/captions.ass', outputPath })
+    ? isReel
+      ? buildReelBurnInCommand({ inputPath: project.mediaPath, assPath: '/captionai/captions.ass', outputPath })
+      : buildBurnInCommand({ inputPath: project.mediaPath, assPath: '/captionai/captions.ass', outputPath })
     : [];
 
   const steps = 20;

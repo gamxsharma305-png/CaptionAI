@@ -7,7 +7,11 @@ function uid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function newProject(name: string, media?: MediaFile): Project {
+export function newProject(
+  name: string,
+  media?: MediaFile,
+  format: 'video' | 'reel' = 'video',
+): Project {
   const now = new Date().toISOString();
   return {
     id: uid(),
@@ -16,9 +20,10 @@ export function newProject(name: string, media?: MediaFile): Project {
     updatedAt: now,
     mediaPath: media?.path,
     mediaType: media?.type,
+    format,
     words: [],
     styleId: 'karaoke-gold',
-    language: 'en',
+    language: 'auto',
   };
 }
 
@@ -50,4 +55,21 @@ export async function saveProject(project: Project): Promise<void> {
 export async function deleteProject(id: string): Promise<void> {
   const all = await listProjects();
   await AsyncStorage.setItem(KEY, JSON.stringify(all.filter((p) => p.id !== id)));
+}
+
+export async function duplicateProject(id: string): Promise<void> {
+  const p = await getProject(id);
+  if (!p) return;
+  const now = new Date().toISOString();
+  const copy: Project = {
+    ...p,
+    id: uid(),
+    name: `${p.name} copy`,
+    createdAt: now,
+    updatedAt: now,
+    words: p.words.map((w) => ({ ...w })),
+  };
+  const all = await listProjects();
+  all.unshift(copy);
+  await AsyncStorage.setItem(KEY, JSON.stringify(all));
 }

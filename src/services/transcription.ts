@@ -1,8 +1,26 @@
 import type { CaptionWord } from '../models';
+import { getKeys } from './keys';
 
 export interface TranscriptionService {
   transcribe(mediaPath: string, language?: string): Promise<CaptionWord[]>;
 }
+
+/** Languages supported by Groq Whisper. 'auto' lets the model detect. */
+export const TRANSCRIPTION_LANGUAGES = [
+  { code: 'auto', label: 'Auto' },
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'it', label: 'Italian' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'ko', label: 'Korean' },
+  { code: 'zh', label: 'Chinese' },
+  { code: 'ar', label: 'Arabic' },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Mock implementation: ~30s of realistic word-level timestamps with a 2s
@@ -29,51 +47,76 @@ export class MockTranscriptionService implements TranscriptionService {
 }
 
 // ---------------------------------------------------------------------------
-// OpenAI Whisper scaffold.
+// Groq Whisper transcription (free tier).
 //
-// TODO: create a `.env` file in the project root with:
-//     EXPO_PUBLIC_WHISPER_API_KEY=sk-...
-// then restart the dev server (`npx expo start -c`). The key is read from
-// the public env at build time and is NEVER hardcoded in source.
-// For production, proxy through your own backend instead of shipping the
-// key in the client.
+// Uses the Groq OpenAI-compatible audio endpoint with the
+// whisper-large-v3-turbo model and word-level timestamp granularities.
+// The API key is entered by the user on the Setup screen and stored in
+// expo-secure-store — it is NEVER hardcoded in source.
+// Get a free key at https://console.groq.com/keys
 // ---------------------------------------------------------------------------
-const WHISPER_API_KEY = process.env.EXPO_PUBLIC_WHISPER_API_KEY;
+interface GroqWord {
+  word: string;
+  start: number;
+  end: number;
+}
 
-export class WhisperTranscriptionService implements TranscriptionService {
-  static isConfigured(): boolean {
-    return !!WHISPER_API_KEY;
+interface GroqVerboseResponse {
+  words?: GroqWord[];
+  text?: string;
+}
+
+export class GroqTranscriptionService implements TranscriptionService {
+  static async isConfigured(): Promise<boolean> {
+    const { groq } = await getKeys();
+    return !!groq;
   }
 
-  async transcribe(mediaPath: string, language = 'en'): Promise<CaptionWord[]> {
-    if (!WHISPER_API_KEY) {
-      throw new Error(
-        'Whisper API key missing. Add EXPO_PUBLIC_WHISPER_API_KEY to your .env file.',
-      );
+  async transcribe(mediaPath: string, language = 'auto'): Promise<CaptionWord[]> {
+    const { groq } = await getKeys();
+    if (!groq) {
+      throw new Error('Groq API key missing. Add it from the API Keys screen (gear icon on Home).');
     }
+
+    const ext = (mediaPath.split('.').pop() ?? '').toLowerCase();
+    const isVideo = ['mp4', 'mov', 'mkv', 'webm', '3gp'].includes(ext);
+
     const form = new FormData();
     form.append('file', {
       uri: mediaPath,
-      name: 'audio.m4a',
-      type: 'audio/m4a',
+      name: `audio.${isVideo ? 'mp4' : 'm4a'}`,
+      type: isVideo ? 'video/mp4' : 'audio/m4a',
     } as unknown as Blob);
-    form.append('model', 'whisper-1');
+    form.append('model', 'whisper-large-v3-turbo');
     form.append('response_format', 'verbose_json');
     form.append('timestamp_granularities[]', 'word');
-    form.append('language', language);
+    if (language !== 'auto') {
+      form.append('language', language);
+    }
 
-    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${WHISPER_API_KEY}` },
-      body: form,
-    });
+    let res: Response;
+    try {
+      res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${groq}` },
+        body: form,
+      });
+    } catch {
+      throw new Error('Network error talking to Groq — check your connection and retry.');
+    }
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Whisper request failed (${res.status}): ${body.slice(0, 200)}`);
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Groq rejected the API key. Re-check it on the API Keys screen.');
+      }
+      throw new Error(`Groq transcription failed (${res.status}): ${body.slice(0, 160)}`);
     }
-    const json = await res.json();
-    const rawWords: Array<{ word: string; start: number; end: number }> = json.words ?? [];
-    return rawWords.map((w, i) => ({
+    const json = (await res.json()) as GroqVerboseResponse;
+    const raw = json.words ?? [];
+    if (raw.length === 0) {
+      throw new Error('Groq returned no word timestamps. Try a different file.');
+    }
+    return raw.map((w, i) => ({
       id: `w${i}`,
       text: w.word,
       start: w.start,

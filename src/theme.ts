@@ -11,6 +11,9 @@ export const theme = {
     secondary: '#8B5CF6',
     danger: '#FF5C5C',
     gold: '#FFC531',
+    teal: '#2DD4BF',
+    mint: '#34D399',
+    sky: '#38BDF8',
   },
   spacing: {
     xs: 4,
