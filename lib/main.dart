@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
-import 'core/theme/app_theme.dart';
+import 'features/home/project_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,5 +15,14 @@ void main() async {
     ),
   );
 
-  runApp(const CaptionAIApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => ProjectProvider()..load(),
+        ),
+      ],
+      child: const CaptionAIApp(),
+    ),
+  );
 }

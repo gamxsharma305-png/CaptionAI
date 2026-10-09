@@ -59,4 +59,39 @@ class Project {
       duration: duration ?? this.duration,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'type': type.name,
+        'mediaPath': mediaPath,
+        'mediaType': mediaType,
+        'words': words.map((w) => w.toJson()).toList(),
+        'styleId': styleId,
+        'languageCode': languageCode,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+        'duration': duration,
+      };
+
+  factory Project.fromJson(Map<String, dynamic> json) {
+    return Project(
+      id: json['id'] as String,
+      name: json['name'] as String? ?? 'Untitled',
+      type: ProjectType.values.firstWhere(
+        (t) => t.name == (json['type'] as String?),
+        orElse: () => ProjectType.autoCaptions,
+      ),
+      mediaPath: json['mediaPath'] as String?,
+      mediaType: json['mediaType'] as String?,
+      words: (json['words'] as List<dynamic>? ?? const [])
+          .map((e) => CaptionWord.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      styleId: json['styleId'] as String? ?? 'cinematic',
+      languageCode: json['languageCode'] as String? ?? 'en',
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      duration: (json['duration'] as num?)?.toDouble(),
+    );
+  }
 }
