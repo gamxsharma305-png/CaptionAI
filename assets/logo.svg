@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#000000"/>
+  <!-- Top bar -->
+  <rect x="252" y="340" width="520" height="90" rx="45" ry="45" fill="#D4FF00"/>
+  <!-- Middle bar -->
+  <rect x="322" y="485" width="380" height="90" rx="45" ry="45" fill="#D4FF00"/>
+  <!-- Bottom bar -->
+  <rect x="392" y="630" width="240" height="90" rx="45" ry="45" fill="#D4FF00"/>
+  <!-- Triangle arrow -->
+  <polygon points="742,320 742,430 852,375" fill="#D4FF00"/>
+</svg>
