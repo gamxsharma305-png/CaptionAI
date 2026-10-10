@@ -1,42 +1,26 @@
-# How to add App Icons (from AppIcons.zip)
+# Add App Icons (1 minute)
 
-You already have the `AppIcons.zip`. Do this once on your machine:
-
-```bash
-# 1. Unzip the pack (if not already)
-unzip AppIcons.zip -d AppIcons
-
-# 2. From the project root (CaptionAI/)
-cp AppIcons/appstore.png              assets/icon.png
-cp AppIcons/android/adaptive-foreground.png  assets/adaptive-icon.png
-
-# 3. Optional but recommended — splash + favicon
-# (or run the decode script if you use the .b64 files)
-```
-
-Then create a simple splash (or use any image editor):
+Your logo URL is ready. Run these commands from the **CaptionAI** project root:
 
 ```bash
-# Quick splash with ImageMagick (if installed):
-convert assets/icon.png -resize 480x480 -gravity center -background '#0B0B10' -extent 1284x2778 assets/splash.png
+# Download logo (1024×1024)
+curl -L -o assets/icon.png "https://www.image2url.com/r2/default/images/1791603611851-bebfd3ae-59e4-4f05-b354-7d20159745c1.png"
 
-# favicon
-convert assets/icon.png -resize 48x48 assets/favicon.png
-```
-
-Or just copy `icon.png` also as splash for now:
-
-```bash
+# Copy for adaptive icon, splash, favicon
+cp assets/icon.png assets/adaptive-icon.png
 cp assets/icon.png assets/splash.png
 cp assets/icon.png assets/favicon.png
-```
 
-Finally:
-
-```bash
+# Push to GitHub
 git add assets/*.png
-git commit -m "Add app icons from AppIcons pack"
+git commit -m "Add app logo icons"
 git push
 ```
 
-After this, `eas build -p android --profile preview` will include your logo on the APK.
+Done. Now build APK:
+
+```bash
+eas build -p android --profile preview
+```
+
+`app.json` already points to these files.
